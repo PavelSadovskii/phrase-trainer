@@ -11,10 +11,11 @@ export default function Home() {
   const [dailyQueue, setDailyQueue] = useState<any[]>([]);
   const [isViewingList, setIsViewingList] = useState(false);
   const [mode, setMode] = useState<string>('flashcard');
+  
+  // Состояния для форм
   const [newPhrase, setNewPhrase] = useState({ phrase: '', translation: '', example: '', context: '' });
   const [importText, setImportText] = useState('');
 
-  // Загрузка данных строго при смене языка
   useEffect(() => {
     if (!lang) return;
     const saved = localStorage.getItem(`phrases-${lang}`);
@@ -48,7 +49,14 @@ export default function Home() {
   const handleImport = () => {
     const newPhrases = importText.split('\n').map(line => {
       const [phrase, translation, example, context] = line.split('|');
-      return { id: Date.now() + Math.random(), phrase: phrase?.trim() || '', translation: translation?.trim() || '...', example: example?.trim() || '', context: context?.trim() || '', nextReview: 0 };
+      return { 
+        id: Date.now() + Math.random(), 
+        phrase: phrase?.trim() || '', 
+        translation: translation?.trim() || '...', 
+        example: example?.trim() || '', 
+        context: context?.trim() || '', 
+        nextReview: 0 
+      };
     }).filter(p => p.phrase);
     savePhrases([...phrases, ...newPhrases]);
     setDailyQueue(prev => [...prev, ...newPhrases]);
@@ -83,16 +91,32 @@ export default function Home() {
         </button>
       </div>
 
-      {/* ОТОБРАЖАЕМ ЛИБО СПИСОК, ЛИБО УПРАЖНЕНИЕ */}
       {isViewingList ? (
         <div className="w-full max-w-md space-y-6">
+          {/* Форма добавления */}
           <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
-            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример (для GapFill)" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
             <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить</button>
           </div>
+          
+          {/* Массовый импорт */}
+          <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
+            <h3 className="font-bold mb-2">Массовый импорт</h3>
+            <p className="text-xs text-gray-500 mb-2">Формат: фраза|перевод|пример|контекст</p>
+            <textarea 
+              className="w-full p-3 bg-[#2a2a2a] rounded-xl text-white mb-2 h-20" 
+              placeholder="фраза|перевод|пример|контекст" 
+              value={importText} 
+              onChange={e => setImportText(e.target.value)}
+            />
+            <button onClick={handleImport} className="w-full bg-[#333] py-3 rounded-xl font-bold">Импортировать</button>
+          </div>
+
           {phrases.map(p => (
-            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl border border-[#333]">{p.phrase} - {p.translation}</div>
+            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl border border-[#333] text-sm">{p.phrase} - {p.translation}</div>
           ))}
         </div>
       ) : (
