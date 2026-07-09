@@ -11,13 +11,13 @@ export default function Home() {
   const [isViewingList, setIsViewingList] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mode, setMode] = useState<string>('flashcard');
+  const [newPhrase, setNewPhrase] = useState({ phrase: '', translation: '', example: '', context: '' });
 
   useEffect(() => {
     const saved = localStorage.getItem('phrase-trainer-data');
     if (saved) {
       const data = JSON.parse(saved);
       setPhrases(data);
-      // Считаем фразы, которые нужно повторить сегодня (nextReview <= сейчас)
       setDailyQueue(data.filter((p: any) => !p.nextReview || p.nextReview <= Date.now()));
     }
     setIsLoaded(true);
@@ -31,21 +31,24 @@ export default function Home() {
     setMode(modes[Math.floor(Math.random() * modes.length)]);
   }, [currentPhrase?.id]);
 
+  const addPhrase = () => {
+    if (!newPhrase.phrase || !newPhrase.translation) return;
+    const updated = [...phrases, { ...newPhrase, id: Date.now(), nextReview: 0 }];
+    setPhrases(updated);
+    setDailyQueue([...dailyQueue, updated[updated.length - 1]]);
+    localStorage.setItem('phrase-trainer-data', JSON.stringify(updated));
+    setNewPhrase({ phrase: '', translation: '', example: '', context: '' });
+  };
+
   const handleReview = (isKnown: boolean) => {
-    let updatedPhrases;
     if (isKnown) {
-      // Убираем из очереди и ставим дату повтора на завтра
       setDailyQueue(prev => prev.slice(1));
-      updatedPhrases = phrases.map(p => 
-        p.id === currentPhrase.id ? { ...p, nextReview: Date.now() + 86400000 } : p
-      );
+      const updated = phrases.map(p => p.id === currentPhrase.id ? { ...p, nextReview: Date.now() + 86400000 } : p);
+      setPhrases(updated);
+      localStorage.setItem('phrase-trainer-data', JSON.stringify(updated));
     } else {
-      // Оставляем в очереди, перемещая в конец
       setDailyQueue(prev => [...prev.slice(1), prev[0]]);
-      updatedPhrases = phrases;
     }
-    setPhrases(updatedPhrases);
-    localStorage.setItem('phrase-trainer-data', JSON.stringify(updatedPhrases));
   };
 
   if (!isLoaded) return null;
@@ -58,24 +61,34 @@ export default function Home() {
       >
         {isViewingList ? "К тренировке" : "Словарь"}
       </button>
-      
+
+      {/* Прогресс-бар */}
       {!isViewingList && currentPhrase && (
         <div className="w-full max-w-md mb-6 flex justify-between items-center text-gray-400 text-sm">
           <span>Осталось повторить: {dailyQueue.length}</span>
           <div className="w-32 h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-blue-600 transition-all duration-500" 
-              style={{ width: `${((phrases.length - dailyQueue.length) / (phrases.length || 1)) * 100}%` }}
-            ></div>
+            <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${((phrases.length - dailyQueue.length) / (phrases.length || 1)) * 100}%` }}></div>
           </div>
         </div>
       )}
 
+      {/* Форма добавления */}
+      {isViewingList && (
+        <div className="w-full max-w-md bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
+          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
+          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
+          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример (для GapFill)" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
+          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
+          <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить фразу</button>
+        </div>
+      )}
+
+      {/* Контент */}
       {isViewingList ? (
         <div className="w-full max-w-md space-y-3">
           {phrases.map(p => (
-            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl text-white font-bold border border-[#333]">
-              {p.phrase}
+            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl border border-[#333] font-bold">
+              {p.phrase} - <span className="text-gray-400 font-normal">{p.translation}</span>
             </div>
           ))}
         </div>
