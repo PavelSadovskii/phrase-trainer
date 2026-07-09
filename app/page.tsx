@@ -11,10 +11,11 @@ export default function Home() {
   const [dailyQueue, setDailyQueue] = useState<any[]>([]);
   const [isViewingList, setIsViewingList] = useState(false);
   const [mode, setMode] = useState<string>('flashcard');
-  
-  // Состояния для форм
   const [newPhrase, setNewPhrase] = useState({ phrase: '', translation: '', example: '', context: '' });
   const [importText, setImportText] = useState('');
+  
+  // Состояние для выбора фраз
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!lang) return;
@@ -49,18 +50,32 @@ export default function Home() {
   const handleImport = () => {
     const newPhrases = importText.split('\n').map(line => {
       const [phrase, translation, example, context] = line.split('|');
-      return { 
-        id: Date.now() + Math.random(), 
-        phrase: phrase?.trim() || '', 
-        translation: translation?.trim() || '...', 
-        example: example?.trim() || '', 
-        context: context?.trim() || '', 
-        nextReview: 0 
-      };
+      return { id: Date.now() + Math.random(), phrase: phrase?.trim() || '', translation: translation?.trim() || '...', example: example?.trim() || '', context: context?.trim() || '', nextReview: 0 };
     }).filter(p => p.phrase);
     savePhrases([...phrases, ...newPhrases]);
     setDailyQueue(prev => [...prev, ...newPhrases]);
     setImportText('');
+  };
+
+  // Удаление выбранных
+  const deleteSelected = () => {
+    const updated = phrases.filter(p => !selectedIds.includes(p.id));
+    savePhrases(updated);
+    setDailyQueue(prev => prev.filter(p => !selectedIds.includes(p.id)));
+    setSelectedIds([]);
+  };
+
+  // Очистка всего
+  const clearAll = () => {
+    if (confirm('Удалить все фразы из словаря?')) {
+      savePhrases([]);
+      setDailyQueue([]);
+      setSelectedIds([]);
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const handleReview = (isKnown: boolean) => {
@@ -93,30 +108,24 @@ export default function Home() {
 
       {isViewingList ? (
         <div className="w-full max-w-md space-y-6">
-          {/* Форма добавления */}
           <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
-            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример (для GapFill)" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
-            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
             <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить</button>
           </div>
           
-          {/* Массовый импорт */}
-          <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
-            <h3 className="font-bold mb-2">Массовый импорт</h3>
-            <p className="text-xs text-gray-500 mb-2">Формат: фраза|перевод|пример|контекст</p>
-            <textarea 
-              className="w-full p-3 bg-[#2a2a2a] rounded-xl text-white mb-2 h-20" 
-              placeholder="фраза|перевод|пример|контекст" 
-              value={importText} 
-              onChange={e => setImportText(e.target.value)}
-            />
-            <button onClick={handleImport} className="w-full bg-[#333] py-3 rounded-xl font-bold">Импортировать</button>
-          </div>
+          {phrases.length > 0 && (
+            <div className="flex gap-2">
+              <button onClick={deleteSelected} className="flex-1 bg-red-900 py-2 rounded-xl text-sm font-bold">Удалить выбранные ({selectedIds.length})</button>
+              <button onClick={clearAll} className="bg-[#333] px-4 py-2 rounded-xl text-sm font-bold">Очистить всё</button>
+            </div>
+          )}
 
           {phrases.map(p => (
-            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl border border-[#333] text-sm">{p.phrase} - {p.translation}</div>
+            <div key={p.id} className={`p-4 rounded-2xl border flex items-center gap-3 ${selectedIds.includes(p.id) ? 'bg-[#2a1a1a] border-red-500' : 'bg-[#1e1e1e] border-[#333]'}`} onClick={() => toggleSelect(p.id)}>
+              <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => {}} className="w-5 h-5" />
+              <div className="text-sm font-bold">{p.phrase} - <span className="text-gray-400 font-normal">{p.translation}</span></div>
+            </div>
           ))}
         </div>
       ) : (
