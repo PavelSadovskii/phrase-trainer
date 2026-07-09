@@ -45,11 +45,13 @@ export default function Home() {
   const handleImport = () => {
     const lines = importText.split('\n');
     const newPhrases = lines.map(line => {
-      const [phrase, translation] = line.split('|');
+      const [phrase, translation, example, context] = line.split('|');
       return { 
         id: Date.now() + Math.random(), 
-        phrase: phrase?.trim(), 
+        phrase: phrase?.trim() || '', 
         translation: translation?.trim() || 'Без перевода',
+        example: example?.trim() || '',
+        context: context?.trim() || '',
         nextReview: 0 
       };
     }).filter(p => p.phrase);
@@ -94,7 +96,6 @@ export default function Home() {
 
       {isViewingList && (
         <div className="w-full max-w-md">
-          {/* Форма добавления */}
           <div className="bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
@@ -103,12 +104,12 @@ export default function Home() {
             <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить фразу</button>
           </div>
           
-          {/* Блок импорта */}
           <div className="bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
             <h3 className="font-bold mb-2">Массовый импорт</h3>
+            <p className="text-xs text-gray-500 mb-2">Формат: фраза|перевод|пример|контекст</p>
             <textarea 
               className="w-full p-3 bg-[#2a2a2a] rounded-xl text-white mb-2 h-24" 
-              placeholder="фраза|перевод&#10;фраза2|перевод2" 
+              placeholder="hello|привет|say hello to my friend|greeting" 
               value={importText}
               onChange={e => setImportText(e.target.value)}
             />
