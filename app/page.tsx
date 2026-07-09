@@ -14,7 +14,7 @@ export default function Home() {
   const [newPhrase, setNewPhrase] = useState({ phrase: '', translation: '', example: '', context: '' });
   const [importText, setImportText] = useState('');
 
-  // Загрузка фраз конкретного языка
+  // Загрузка данных строго при смене языка
   useEffect(() => {
     if (!lang) return;
     const saved = localStorage.getItem(`phrases-${lang}`);
@@ -37,10 +37,11 @@ export default function Home() {
   }, [currentPhrase?.id]);
 
   const addPhrase = () => {
-    if (!newPhrase.phrase || !newPhrase.translation) return;
-    const updated = [...phrases, { ...newPhrase, id: Date.now(), nextReview: 0 }];
+    if (!newPhrase.phrase) return;
+    const newEntry = { ...newPhrase, id: Date.now(), nextReview: 0 };
+    const updated = [...phrases, newEntry];
     savePhrases(updated);
-    setDailyQueue([...dailyQueue, updated[updated.length - 1]]);
+    setDailyQueue(prev => [...prev, newEntry]);
     setNewPhrase({ phrase: '', translation: '', example: '', context: '' });
   };
 
@@ -50,7 +51,7 @@ export default function Home() {
       return { id: Date.now() + Math.random(), phrase: phrase?.trim() || '', translation: translation?.trim() || '...', example: example?.trim() || '', context: context?.trim() || '', nextReview: 0 };
     }).filter(p => p.phrase);
     savePhrases([...phrases, ...newPhrases]);
-    setDailyQueue([...dailyQueue, ...newPhrases]);
+    setDailyQueue(prev => [...prev, ...newPhrases]);
     setImportText('');
   };
 
@@ -63,7 +64,6 @@ export default function Home() {
     }
   };
 
-  // Экран выбора языка
   if (!lang) return (
     <main className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white">
       <h1 className="text-3xl font-bold mb-10">Какой язык учим сегодня?</h1>
@@ -77,52 +77,37 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#000000] p-6 flex flex-col items-center text-white">
       <div className="flex gap-2 mb-8">
-        <button onClick={() => setLang(null)} className="bg-[#333] px-4 py-2 rounded-xl text-xs">Сменить язык</button>
+        <button onClick={() => setLang(null)} className="bg-[#333] px-4 py-2 rounded-xl text-xs">Смена языка</button>
         <button onClick={() => setIsViewingList(!isViewingList)} className="bg-[#1e1e1e] px-6 py-2 rounded-xl border border-[#333]">
           {isViewingList ? "К тренировке" : "Словарь"}
         </button>
       </div>
 
-      {!isViewingList && currentPhrase && (
-        <div className="w-full max-w-md mb-6 flex justify-between items-center text-gray-400 text-sm">
-          <span>Осталось повторить: {dailyQueue.length}</span>
-          <div className="w-32 h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-            <div className="h-full bg-blue-600 transition-all" style={{ width: `${((phrases.length - dailyQueue.length) / (phrases.length || 1)) * 100}%` }}></div>
-          </div>
-        </div>
-      )}
-
-      {isViewingList && (
-        <div className="w-full max-w-md">
-          <div className="bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
+      {/* ОТОБРАЖАЕМ ЛИБО СПИСОК, ЛИБО УПРАЖНЕНИЕ */}
+      {isViewingList ? (
+        <div className="w-full max-w-md space-y-6">
+          <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
-            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
-            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
-            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
             <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить</button>
           </div>
-          <div className="bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
-             <h3 className="font-bold mb-2">Импорт</h3>
-             <textarea className="w-full p-3 bg-[#2a2a2a] rounded-xl text-white mb-2 h-20" placeholder="фраза|перевод|пример|контекст" value={importText} onChange={e => setImportText(e.target.value)}/>
-             <button onClick={handleImport} className="w-full bg-[#333] py-3 rounded-xl font-bold">Импортировать</button>
-          </div>
-        </div>
-      )}
-
-      {isViewingList ? (
-        <div className="w-full max-w-md space-y-3">
           {phrases.map(p => (
-            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl border border-[#333] font-bold">{p.phrase} - <span className="text-gray-400 font-normal">{p.translation}</span></div>
+            <div key={p.id} className="bg-[#1e1e1e] p-4 rounded-2xl border border-[#333]">{p.phrase} - {p.translation}</div>
           ))}
         </div>
-      ) : !currentPhrase ? (
-        <div className="text-xl font-bold mt-20">Всё выучено! 🎉</div>
       ) : (
         <div className="w-full max-w-md">
-          {mode === 'flashcard' && <Flashcard phrase={currentPhrase} onReview={handleReview} />}
-          {mode === 'gapfill' && <GapFill phrase={currentPhrase} onReview={handleReview} />}
-          {mode === 'scramble' && <Scramble phrase={currentPhrase} onReview={handleReview} />}
-          {mode === 'missingLetters' && <MissingLetters phrase={currentPhrase} onReview={handleReview} />}
+            {!currentPhrase ? (
+                <div className="text-xl font-bold mt-20 text-center">Всё выучено на сегодня! 🎉</div>
+            ) : (
+                <>
+                    <div className="mb-6 text-gray-400 text-sm">Осталось повторить: {dailyQueue.length}</div>
+                    {mode === 'flashcard' && <Flashcard phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'gapfill' && <GapFill phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'scramble' && <Scramble phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'missingLetters' && <MissingLetters phrase={currentPhrase} onReview={handleReview} />}
+                </>
+            )}
         </div>
       )}
     </main>
