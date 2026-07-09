@@ -13,8 +13,6 @@ export default function Home() {
   const [mode, setMode] = useState<string>('flashcard');
   const [newPhrase, setNewPhrase] = useState({ phrase: '', translation: '', example: '', context: '' });
   const [importText, setImportText] = useState('');
-  
-  // Состояние для выбора фраз
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -25,9 +23,11 @@ export default function Home() {
     setDailyQueue(data.filter((p: any) => !p.nextReview || p.nextReview <= Date.now()));
   }, [lang]);
 
-  const savePhrases = (updated: any[]) => {
-    setPhrases(updated);
-    localStorage.setItem(`phrases-${lang}`, JSON.stringify(updated));
+  const saveAll = (updatedPhrases: any[]) => {
+    setPhrases(updatedPhrases);
+    localStorage.setItem(`phrases-${lang}`, JSON.stringify(updatedPhrases));
+    // Пересчитываем очередь на основе обновленного списка
+    setDailyQueue(updatedPhrases.filter((p: any) => !p.nextReview || p.nextReview <= Date.now()));
   };
 
   const currentPhrase = dailyQueue.length > 0 ? dailyQueue[0] : null;
@@ -41,9 +41,7 @@ export default function Home() {
   const addPhrase = () => {
     if (!newPhrase.phrase) return;
     const newEntry = { ...newPhrase, id: Date.now(), nextReview: 0 };
-    const updated = [...phrases, newEntry];
-    savePhrases(updated);
-    setDailyQueue(prev => [...prev, newEntry]);
+    saveAll([...phrases, newEntry]);
     setNewPhrase({ phrase: '', translation: '', example: '', context: '' });
   };
 
@@ -52,24 +50,19 @@ export default function Home() {
       const [phrase, translation, example, context] = line.split('|');
       return { id: Date.now() + Math.random(), phrase: phrase?.trim() || '', translation: translation?.trim() || '...', example: example?.trim() || '', context: context?.trim() || '', nextReview: 0 };
     }).filter(p => p.phrase);
-    savePhrases([...phrases, ...newPhrases]);
-    setDailyQueue(prev => [...prev, ...newPhrases]);
+    saveAll([...phrases, ...newPhrases]);
     setImportText('');
   };
 
-  // Удаление выбранных
   const deleteSelected = () => {
     const updated = phrases.filter(p => !selectedIds.includes(p.id));
-    savePhrases(updated);
-    setDailyQueue(prev => prev.filter(p => !selectedIds.includes(p.id)));
+    saveAll(updated);
     setSelectedIds([]);
   };
 
-  // Очистка всего
   const clearAll = () => {
-    if (confirm('Удалить все фразы из словаря?')) {
-      savePhrases([]);
-      setDailyQueue([]);
+    if (confirm('Удалить все фразы?')) {
+      saveAll([]);
       setSelectedIds([]);
     }
   };
@@ -80,8 +73,7 @@ export default function Home() {
 
   const handleReview = (isKnown: boolean) => {
     if (isKnown) {
-      setDailyQueue(prev => prev.slice(1));
-      savePhrases(phrases.map(p => p.id === currentPhrase.id ? { ...p, nextReview: Date.now() + 86400000 } : p));
+      saveAll(phrases.map(p => p.id === currentPhrase.id ? { ...p, nextReview: Date.now() + 86400000 } : p));
     } else {
       setDailyQueue(prev => [...prev.slice(1), prev[0]]);
     }
@@ -111,16 +103,21 @@ export default function Home() {
           <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
             <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример (для GapFill)" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
             <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить</button>
           </div>
-          
+          <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-[#333]">
+            <h3 className="font-bold mb-2">Массовый импорт</h3>
+            <textarea className="w-full p-3 bg-[#2a2a2a] rounded-xl text-white mb-2 h-20" placeholder="фраза|перевод|пример|контекст" value={importText} onChange={e => setImportText(e.target.value)}/>
+            <button onClick={handleImport} className="w-full bg-[#333] py-3 rounded-xl font-bold">Импортировать</button>
+          </div>
           {phrases.length > 0 && (
             <div className="flex gap-2">
-              <button onClick={deleteSelected} className="flex-1 bg-red-900 py-2 rounded-xl text-sm font-bold">Удалить выбранные ({selectedIds.length})</button>
+              <button onClick={deleteSelected} className="flex-1 bg-red-900 py-2 rounded-xl text-sm font-bold">Удалить ({selectedIds.length})</button>
               <button onClick={clearAll} className="bg-[#333] px-4 py-2 rounded-xl text-sm font-bold">Очистить всё</button>
             </div>
           )}
-
           {phrases.map(p => (
             <div key={p.id} className={`p-4 rounded-2xl border flex items-center gap-3 ${selectedIds.includes(p.id) ? 'bg-[#2a1a1a] border-red-500' : 'bg-[#1e1e1e] border-[#333]'}`} onClick={() => toggleSelect(p.id)}>
               <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => {}} className="w-5 h-5" />
@@ -131,7 +128,7 @@ export default function Home() {
       ) : (
         <div className="w-full max-w-md">
             {!currentPhrase ? (
-                <div className="text-xl font-bold mt-20 text-center">Всё выучено на сегодня! 🎉</div>
+                <div className="text-xl font-bold mt-20 text-center">Всё выучено! 🎉</div>
             ) : (
                 <>
                     <div className="mb-6 text-gray-400 text-sm">Осталось повторить: {dailyQueue.length}</div>
