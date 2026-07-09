@@ -11,7 +11,9 @@ export default function Home() {
   const [isViewingList, setIsViewingList] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mode, setMode] = useState<string>('flashcard');
+  
   const [newPhrase, setNewPhrase] = useState({ phrase: '', translation: '', example: '', context: '' });
+  const [importText, setImportText] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('phrase-trainer-data');
@@ -40,6 +42,25 @@ export default function Home() {
     setNewPhrase({ phrase: '', translation: '', example: '', context: '' });
   };
 
+  const handleImport = () => {
+    const lines = importText.split('\n');
+    const newPhrases = lines.map(line => {
+      const [phrase, translation] = line.split('|');
+      return { 
+        id: Date.now() + Math.random(), 
+        phrase: phrase?.trim(), 
+        translation: translation?.trim() || 'Без перевода',
+        nextReview: 0 
+      };
+    }).filter(p => p.phrase);
+    
+    const updated = [...phrases, ...newPhrases];
+    setPhrases(updated);
+    setDailyQueue([...dailyQueue, ...newPhrases]);
+    localStorage.setItem('phrase-trainer-data', JSON.stringify(updated));
+    setImportText('');
+  };
+
   const handleReview = (isKnown: boolean) => {
     if (isKnown) {
       setDailyQueue(prev => prev.slice(1));
@@ -62,7 +83,6 @@ export default function Home() {
         {isViewingList ? "К тренировке" : "Словарь"}
       </button>
 
-      {/* Прогресс-бар */}
       {!isViewingList && currentPhrase && (
         <div className="w-full max-w-md mb-6 flex justify-between items-center text-gray-400 text-sm">
           <span>Осталось повторить: {dailyQueue.length}</span>
@@ -72,18 +92,31 @@ export default function Home() {
         </div>
       )}
 
-      {/* Форма добавления */}
       {isViewingList && (
-        <div className="w-full max-w-md bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
-          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
-          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
-          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример (для GapFill)" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
-          <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
-          <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить фразу</button>
+        <div className="w-full max-w-md">
+          {/* Форма добавления */}
+          <div className="bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Фраза" value={newPhrase.phrase} onChange={e => setNewPhrase({...newPhrase, phrase: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Перевод" value={newPhrase.translation} onChange={e => setNewPhrase({...newPhrase, translation: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-2" placeholder="Пример (для GapFill)" value={newPhrase.example} onChange={e => setNewPhrase({...newPhrase, example: e.target.value})} />
+            <input className="w-full p-3 bg-[#2a2a2a] rounded-xl mb-4" placeholder="Контекст" value={newPhrase.context} onChange={e => setNewPhrase({...newPhrase, context: e.target.value})} />
+            <button onClick={addPhrase} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Добавить фразу</button>
+          </div>
+          
+          {/* Блок импорта */}
+          <div className="bg-[#1e1e1e] p-6 rounded-3xl mb-6 border border-[#333]">
+            <h3 className="font-bold mb-2">Массовый импорт</h3>
+            <textarea 
+              className="w-full p-3 bg-[#2a2a2a] rounded-xl text-white mb-2 h-24" 
+              placeholder="фраза|перевод&#10;фраза2|перевод2" 
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+            />
+            <button onClick={handleImport} className="w-full bg-[#333] py-3 rounded-xl font-bold">Импортировать</button>
+          </div>
         </div>
       )}
 
-      {/* Контент */}
       {isViewingList ? (
         <div className="w-full max-w-md space-y-3">
           {phrases.map(p => (
