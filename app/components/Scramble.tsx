@@ -1,5 +1,5 @@
 'use client';
-import React, { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from 'react';
+import React, { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect, useState } from 'react';
 
 export default function Scramble({ phrase, onReview }: any) {
   // Добавляем индекс к словам, чтобы дубликаты стали уникальными объектами
@@ -12,6 +12,13 @@ export default function Scramble({ phrase, onReview }: any) {
   const [checked, setChecked] = useState(false);
   
   const isCorrect = selected.map((w: { text: any; }) => w.text).join(' ') === phrase.phrase;
+  // Добавь это ВНУТРЬ компонента Scramble, GapFill и т.д.
+  useEffect(() => {
+  // Тут сброс состояний:
+  // setSelectedWords([]); 
+  // setChecked(false);
+  // и т.д.
+  }, [phrase.id]);
 
   return (
     <div className="bg-[#1e1e1e] p-8 rounded-[32px] shadow-2xl text-center">

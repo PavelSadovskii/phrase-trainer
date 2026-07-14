@@ -132,10 +132,10 @@ export default function Home() {
             ) : (
                 <>
                     <div className="mb-6 text-gray-400 text-sm">Осталось повторить: {dailyQueue.length}</div>
-                    {mode === 'flashcard' && <Flashcard phrase={currentPhrase} onReview={handleReview} />}
-                    {mode === 'gapfill' && <GapFill phrase={currentPhrase} onReview={handleReview} />}
-                    {mode === 'scramble' && <Scramble phrase={currentPhrase} onReview={handleReview} />}
-                    {mode === 'missingLetters' && <MissingLetters phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'flashcard' && <Flashcard key={currentPhrase.id} phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'gapfill' && <GapFill key={currentPhrase.id} phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'scramble' && <Scramble key={currentPhrase.id} phrase={currentPhrase} onReview={handleReview} />}
+                    {mode === 'missingLetters' && <MissingLetters key={currentPhrase.id} phrase={currentPhrase} onReview={handleReview} />}
                 </>
             )}
         </div>
